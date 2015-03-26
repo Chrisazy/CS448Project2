@@ -2,13 +2,70 @@
 
 package bufmgr;
 
-import java.io.*;
-import java.util.*;
-import diskmgr.*;
-import global.*;
+import global.GlobalConst;
+import global.PageId;
 
-public class BufMgr implements GlobalConst{
+import java.util.ArrayList;
+import java.util.LinkedList;
 
+import diskmgr.Page;
+
+
+
+public class BufMgr implements GlobalConst {
+
+  
+  private class FrameDescriptor {
+    
+    public PageId page_number;
+    public int pin_count;
+    public boolean dirtybit;
+    
+  }
+  
+  private class HashTable {
+    private ArrayList<FrameDescriptor>[] tab;
+    private final int HTSIZE;
+    private final int SALT = 3;
+    private final int PEPPER = 5;
+    
+    public HashTable(int size) {
+      this.HTSIZE = size;
+      tab = new ArrayList[size];
+      for(int i=0;i<size;i++) {
+        tab[i] = new ArrayList<FrameDescriptor>();
+      }
+    }
+    
+    private int hash(int value) {
+      return (SALT*value + PEPPER) % HTSIZE;
+    }
+    
+    public void set(FrameDescriptor fd) {
+      int index = hash(fd.page_number.pid);
+      tab[index].add(fd);
+    }
+    
+    public FrameDescriptor get(PageId pageNum) {
+      int index = hash(pageNum.pid);
+      ArrayList<FrameDescriptor> bucket = tab[index];
+      for(int i=0;i<bucket.size();i++) {
+        FrameDescriptor fd = bucket.get(i);
+        if(fd.page_number.pid == pageNum.pid)
+          return fd;
+      }
+      return null;
+    }
+  }
+  
+  private String replacementPolicy;
+  
+  private byte[][] bufpool;
+  private FrameDescriptor bufDescr[];
+  private HashTable directory;
+  
+  private LinkedList<FrameDescriptor> lruQueue;
+  
   /**
    * Create the BufMgr object.
    * Allocate pages (frames) for the buffer pool in main memory and
@@ -18,11 +75,21 @@ public class BufMgr implements GlobalConst{
    * @param numbufs number of buffers in the buffer pool.
    * @param replacerArg name of the buffer replacement policy.
    */
-  public BufMgr(int numbufs, String replacerArg) {};
+  public BufMgr(int numbufs, String replacerArg) {
+    bufpool = new byte[numbufs][];
+    bufDescr = new FrameDescriptor[numbufs];
+    for(int i=0;i<numbufs;i++) {
+      bufpool[i] = new byte[MINIBASE_PAGESIZE];
+      bufDescr[i] = new FrameDescriptor();
+    }
+    replacementPolicy = replacerArg;
+    directory = new HashTable(23);
+    lruQueue = new LinkedList<FrameDescriptor>();
+  }
 
 
   /**
-   * Pin a page.
+   * Pin a page. 
    * First check if this page is already in the buffer pool.
    * If it is, increment the pin_count and return a pointer to this
    * page.  If the pin_count was 0 before the call, the page was a
@@ -38,7 +105,9 @@ public class BufMgr implements GlobalConst{
    * @param page the pointer poit to the page.
    * @param emptyPage true (empty page); false (non-empty page)
    */
-  public void pinPage(PageId pin_pgid, Page page, boolean emptyPage) {};
+  public void pinPage(PageId pin_pgid, Page page, boolean emptyPage) {
+    
+  };
 
 
   /**
